@@ -1,25 +1,19 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const {sequelize} = require('./model')
-const {getProfile} = require('./middleware/getProfile')
-const app = express();
-app.use(bodyParser.json());
-app.set('sequelize', sequelize)
-app.set('models', sequelize.models)
+const { sequelize } = require('./models');
+const contractRoutes = require('./routes/contractRoutes');
 
-/**
- * FIX ME!
- * @returns contract by id
- */
+const app = express();
+
+app.use(bodyParser.json());
+app.set('sequelize', sequelize);
+app.set('models', sequelize.models);
 
 app.get('/', (req, res) => {
-    res.send('Hello World')
-})
-app.get('/contracts/:id',getProfile ,async (req, res) =>{
-    const {Contract} = req.app.get('models')
-    const {id} = req.params
-    const contract = await Contract.findOne({where: {id}})
-    if(!contract) return res.status(404).end()
-    res.json(contract)
-})
+    res.send('Hello World');
+});
+
+// Routes
+app.use('/contracts', contractRoutes);
+
 module.exports = app;
