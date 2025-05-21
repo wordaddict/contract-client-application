@@ -4,6 +4,7 @@ init();
 
 async function init() {
   try {
+    // move to env
     app.listen(3001, () => {
       console.log('Express App Listening on Port 3001');
     });

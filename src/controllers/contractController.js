@@ -5,6 +5,7 @@ class ContractController {
         const { id } = req.params;
         const profileId = req.profile.id;
 
+        // This ensures that the contract belongs to the profile
         const contract = await contractService.getContractById(id, profileId);
         
         if (!contract) {
