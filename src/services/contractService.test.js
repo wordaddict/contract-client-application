@@ -69,5 +69,31 @@ describe('ContractService', () => {
             expect(result).toEqual(mockContracts);
             expect(contractRepository.findByProfileId).toHaveBeenCalledWith(1);
         });
+
+        it('should return empty array when profile has no contracts', async () => {
+            contractRepository.findByProfileId.mockResolvedValue([]);
+            
+            const result = await contractService.getContractsByProfileId(999);
+            
+            expect(result).toEqual([]);
+            expect(contractRepository.findByProfileId).toHaveBeenCalledWith(999);
+        });
+
+        it('should only return non-terminated contracts', async () => {
+            const mockContracts = [
+                { ...mockContract, status: 'in_progress' },
+                { ...mockContract, id: 2, status: 'new' },
+                { ...mockContract, id: 3, status: 'terminated' }
+            ];
+            contractRepository.findByProfileId.mockResolvedValue(
+                mockContracts.filter(c => c.status !== 'terminated')
+            );
+            
+            const result = await contractService.getContractsByProfileId(1);
+            
+            expect(result).toHaveLength(2);
+            expect(result.every(c => c.status !== 'terminated')).toBe(true);
+            expect(contractRepository.findByProfileId).toHaveBeenCalledWith(1);
+        });
     });
 }); 
