@@ -1,70 +1,230 @@
-const contractController = require('./contractController');
-const contractService = require('../services/contractService');
+const request = require('supertest');
+const app = require('../app');
+const { Profile, Contract } = require('../models');
 
-// Mock the service
-jest.mock('../services/contractService');
+describe('Contract Controller', () => {
+    let clientProfile;
+    let contractorProfile;
+    let otherProfile;
+    let contract1;
+    let contract2;
+    let terminatedContract;
 
-describe('ContractController', () => {
-    let mockRequest;
-    let mockResponse;
-    let mockContract;
+    beforeAll(async () => {
+        process.env.NODE_ENV = 'test';
+        await require('../models').sequelize.sync({ force: true });
+    });
 
-    beforeEach(() => {
-        // Reset all mocks before each test
-        jest.clearAllMocks();
-        
-        // Setup mock contract
-        mockContract = {
-            id: 1,
-            terms: 'Test contract terms',
+    beforeEach(async () => {
+        // Create test profiles
+        clientProfile = await Profile.create({
+            firstName: 'Test',
+            lastName: 'Client',
+            profession: 'Client',
+            balance: 1000,
+            type: 'client'
+        });
+
+        contractorProfile = await Profile.create({
+            firstName: 'Test',
+            lastName: 'Contractor',
+            profession: 'Developer',
+            balance: 0,
+            type: 'contractor'
+        });
+
+        otherProfile = await Profile.create({
+            firstName: 'Other',
+            lastName: 'User',
+            profession: 'Designer',
+            balance: 0,
+            type: 'contractor'
+        });
+
+        // Create test contracts
+        contract1 = await Contract.create({
+            terms: 'Test contract 1',
             status: 'in_progress',
-            ClientId: 1,
-            ContractorId: 2
-        };
+            ClientId: clientProfile.id,
+            ContractorId: contractorProfile.id
+        });
 
-        // Setup mock request and response
-        mockRequest = {
-            params: { id: '1' },
-            profile: { id: 1 }
-        };
+        contract2 = await Contract.create({
+            terms: 'Test contract 2',
+            status: 'new',
+            ClientId: clientProfile.id,
+            ContractorId: contractorProfile.id
+        });
 
-        mockResponse = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-            end: jest.fn()
-        };
+        terminatedContract = await Contract.create({
+            terms: 'Terminated contract',
+            status: 'terminated',
+            ClientId: clientProfile.id,
+            ContractorId: contractorProfile.id
+        });
     });
 
-    describe('getContractById', () => {
+    afterEach(async () => {
+        await Contract.destroy({ where: {}, force: true });
+        await Profile.destroy({ where: {}, force: true });
+    });
+
+    afterAll(async () => {
+        await require('../models').sequelize.close();
+    });
+
+    describe('GET /contracts/:id', () => {
+        it('should return contract when user is client', async () => {
+            const response = await request(app)
+                .get(`/contracts/${contract1.id}`)
+                .set('profile_id', clientProfile.id);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toEqual({
+                status: 'success',
+                data: {
+                    contract: expect.objectContaining({
+                        id: contract1.id,
+                        terms: contract1.terms,
+                        status: contract1.status
+                    })
+                }
+            });
+        });
+
+        it('should return contract when user is contractor', async () => {
+            const response = await request(app)
+                .get(`/contracts/${contract1.id}`)
+                .set('profile_id', contractorProfile.id);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toEqual({
+                status: 'success',
+                data: {
+                    contract: expect.objectContaining({
+                        id: contract1.id,
+                        terms: contract1.terms,
+                        status: contract1.status
+                    })
+                }
+            });
+        });
+
         it('should return 404 when contract does not exist', async () => {
-            contractService.getContractById.mockResolvedValue(null);
-            
-            await contractController.getContractById(mockRequest, mockResponse);
-            
-            expect(contractService.getContractById).toHaveBeenCalledWith('1', 1);
-            expect(mockResponse.status).toHaveBeenCalledWith(404);
-            expect(mockResponse.end).toHaveBeenCalled();
+            const response = await request(app)
+                .get('/contracts/99999')
+                .set('profile_id', clientProfile.id);
+
+            expect(response.status).toBe(404);
+            expect(response.body).toEqual({
+                status: 'error',
+                message: 'Contract not found'
+            });
         });
 
-        it('should return contract when it exists', async () => {
-            contractService.getContractById.mockResolvedValue(mockContract);
-            
-            await contractController.getContractById(mockRequest, mockResponse);
-            
-            expect(contractService.getContractById).toHaveBeenCalledWith('1', 1);
-            expect(mockResponse.json).toHaveBeenCalledWith(mockContract);
+        it('should return 403 when user is not associated with contract', async () => {
+            const response = await request(app)
+                .get(`/contracts/${contract1.id}`)
+                .set('profile_id', otherProfile.id);
+
+            expect(response.status).toBe(403);
+            expect(response.body).toEqual({
+                status: 'error',
+                message: 'Unauthorized access to contract'
+            });
+        });
+
+        it('should return 401 when profile_id is not provided', async () => {
+            const response = await request(app)
+                .get(`/contracts/${contract1.id}`);
+
+            expect(response.status).toBe(401);
+            expect(response.body).toEqual({
+                status: 'error',
+                message: 'Authentication required'
+            });
         });
     });
 
-    describe('getContracts', () => {
-        it('should return contracts for a profile', async () => {
-            const mockContracts = [mockContract];
-            contractService.getContractsByProfileId.mockResolvedValue(mockContracts);
-            
-            await contractController.getContracts(mockRequest, mockResponse);
-            
-            expect(contractService.getContractsByProfileId).toHaveBeenCalledWith(1);
-            expect(mockResponse.json).toHaveBeenCalledWith(mockContracts);
+    describe('GET /contracts', () => {
+        it('should return non-terminated contracts for client', async () => {
+            const response = await request(app)
+                .get('/contracts')
+                .set('profile_id', clientProfile.id);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toEqual({
+                status: 'success',
+                data: {
+                    contracts: expect.arrayContaining([
+                        expect.objectContaining({
+                            id: contract1.id,
+                            terms: contract1.terms,
+                            status: contract1.status
+                        }),
+                        expect.objectContaining({
+                            id: contract2.id,
+                            terms: contract2.terms,
+                            status: contract2.status
+                        })
+                    ]),
+                    count: 2
+                }
+            });
+            expect(response.body.data.contracts.find(c => c.id === terminatedContract.id)).toBeUndefined();
+        });
+
+        it('should return non-terminated contracts for contractor', async () => {
+            const response = await request(app)
+                .get('/contracts')
+                .set('profile_id', contractorProfile.id);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toEqual({
+                status: 'success',
+                data: {
+                    contracts: expect.arrayContaining([
+                        expect.objectContaining({
+                            id: contract1.id,
+                            terms: contract1.terms,
+                            status: contract1.status
+                        }),
+                        expect.objectContaining({
+                            id: contract2.id,
+                            terms: contract2.terms,
+                            status: contract2.status
+                        })
+                    ]),
+                    count: 2
+                }
+            });
+            expect(response.body.data.contracts.find(c => c.id === terminatedContract.id)).toBeUndefined();
+        });
+
+        it('should return empty array for user with no contracts', async () => {
+            const response = await request(app)
+                .get('/contracts')
+                .set('profile_id', otherProfile.id);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toEqual({
+                status: 'success',
+                data: {
+                    contracts: [],
+                    count: 0
+                }
+            });
+        });
+
+        it('should return 401 when profile_id is not provided', async () => {
+            const response = await request(app)
+                .get('/contracts');
+
+            expect(response.status).toBe(401);
+            expect(response.body).toEqual({
+                status: 'error',
+                message: 'Authentication required'
+            });
         });
     });
 }); 
