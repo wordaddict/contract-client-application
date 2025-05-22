@@ -24,10 +24,7 @@ const depositBalance = async (req, res) => {
         res.json({
             status: 'success',
             message: 'Deposit successful',
-            data: {
-                id: updatedProfile.id,
-                balance: updatedProfile.balance
-            }
+            data: updatedProfile
         });
     } catch (error) {
         console.error('Error in depositBalance:', error);
@@ -54,7 +51,7 @@ const depositBalance = async (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-async function getBestProfession(req, res) {
+const getBestProfession = async (req, res) => {
     try {
         const { start, end } = req.query;
 
@@ -90,9 +87,43 @@ async function getBestProfession(req, res) {
             data: null
         });
     }
-}
+};
+
+/**
+ * Get best clients by payment amount
+ */
+const getBestClients = async (req, res) => {
+    try {
+        const { start, end, limit = 2 } = req.query;
+
+        const result = await profileService.getBestClients(start, end, parseInt(limit));
+
+        res.json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        console.error('Error in getBestClients:', error);
+        
+        if (error instanceof BadRequestError) {
+            return res.status(400).json({
+                status: 'error',
+                message: error.message,
+                data: null
+            });
+        }
+
+        // Handle any other errors as server errors
+        return res.status(500).json({
+            status: 'error',
+            message: 'Internal server error',
+            data: null
+        });
+    }
+};
 
 module.exports = {
     depositBalance,
-    getBestProfession
+    getBestProfession,
+    getBestClients
 }; 

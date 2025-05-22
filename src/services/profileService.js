@@ -15,75 +15,51 @@ class ProfileService {
      * @throws {BadRequestError} If amount exceeds 25% of unpaid jobs or profile is not a client
      */
     async depositBalance(userId, amount) {
-        // Start transaction
-        const transaction = await sequelize.transaction();
-
-        try {
-            // Get profile with lock to prevent concurrent deposits
-            const profile = await Profile.findOne({
-                where: { id: userId },
-                lock: transaction.LOCK.UPDATE,
-                transaction
-            });
-
-            if (!profile) {
-                await transaction.rollback();
-                throw new NotFoundError('Profile not found');
-            }
-
-            // Check if profile is a client
-            if (profile.type !== 'client') {
-                await transaction.rollback();
-                throw new BadRequestError('Only clients can deposit money');
-            }
-
-            // Calculate total of unpaid jobs
-            const unpaidJobs = await Job.findAll({
-                include: [{
-                    model: Contract,
-                    where: {
-                        status: 'in_progress',
-                        ClientId: userId
-                    }
-                }],
-                where: {
-                    paid: false
-                },
-                transaction
-            });
-
-            const totalUnpaid = unpaidJobs.reduce((sum, job) => sum + job.price, 0);
-            
-            // Only apply 25% limit if there are unpaid jobs
-            if (totalUnpaid > 0) {
-                const maxDeposit = totalUnpaid * 0.25;
-                if (amount > maxDeposit) {
-                    await transaction.rollback();
-                    throw new BadRequestError(
-                        `Cannot deposit more than 25% of total unpaid jobs (${maxDeposit})`
-                    );
-                }
-            }
-
-            // Update balance using literal to ensure atomicity
-            await Profile.update(
-                { balance: sequelize.literal(`balance + ${amount}`) },
-                { 
-                    where: { id: userId },
-                    transaction 
-                }
-            );
-
-            await transaction.commit();
-
-            // Return updated profile
-            return await Profile.findByPk(userId);
-        } catch (error) {
-            if (transaction && !transaction.finished) {
-                await transaction.rollback();
-            }
-            throw error;
+        if (!amount || amount <= 0) {
+            throw new BadRequestError('Invalid deposit amount');
         }
+
+        const profile = await Profile.findByPk(userId);
+        if (!profile) {
+            throw new NotFoundError('Profile not found');
+        }
+
+        if (profile.type !== 'client') {
+            throw new BadRequestError('Only clients can deposit money');
+        }
+
+        // Get total unpaid jobs amount
+        const unpaidJobs = await Job.findAll({
+            include: [{
+                model: Contract,
+                where: {
+                    ClientId: userId,
+                    status: 'in_progress'
+                }
+            }],
+            where: {
+                paid: false
+            }
+        });
+
+        const totalUnpaid = unpaidJobs.reduce((sum, job) => sum + job.price, 0);
+        const maxDeposit = totalUnpaid * 0.25;
+
+        // If there are no unpaid jobs, allow any deposit amount
+        if (totalUnpaid === 0) {
+            profile.balance += amount;
+            await profile.save();
+            return profile;
+        }
+
+        if (amount > maxDeposit) {
+            throw new BadRequestError(`Cannot deposit more than 25% of total unpaid jobs (${maxDeposit})`);
+        }
+
+        profile.balance += amount;
+        await profile.save();
+
+        return profile;
     }
 
     /**
@@ -156,6 +132,55 @@ class ProfileService {
             }
             throw new Error('Invalid date format');
         }
+    }
+
+    /**
+     * Get best clients by payment amount
+     */
+    async getBestClients(start, end, limit = 2) {
+        if (!start || !end) {
+            throw new BadRequestError('Start and end dates are required');
+        }
+
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            throw new BadRequestError('Invalid date format');
+        }
+
+        if (startDate > endDate) {
+            throw new BadRequestError('Start date must be before end date');
+        }
+
+        const result = await Job.findAll({
+            attributes: [
+                [sequelize.fn('SUM', sequelize.col('price')), 'paid']
+            ],
+            include: [{
+                model: Contract,
+                include: [{
+                    model: Profile,
+                    as: 'Client',
+                    attributes: ['id', 'firstName', 'lastName']
+                }]
+            }],
+            where: {
+                paid: true,
+                paymentDate: {
+                    [Op.between]: [startDate, endDate]
+                }
+            },
+            group: ['Contract.Client.id'],
+            order: [[sequelize.fn('SUM', sequelize.col('price')), 'DESC']],
+            limit: limit
+        });
+
+        return result.map(job => ({
+            id: job.Contract.Client.id,
+            fullName: `${job.Contract.Client.firstName} ${job.Contract.Client.lastName}`,
+            paid: parseInt(job.getDataValue('paid'))
+        }));
     }
 }
 

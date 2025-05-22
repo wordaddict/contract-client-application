@@ -1,5 +1,5 @@
 const express = require('express');
-const { depositBalance, getBestProfession } = require('../controllers/profileController');
+const { depositBalance, getBestProfession, getBestClients } = require('../controllers/profileController');
 const { getProfile } = require('../middleware/getProfile');
 const isAdmin = require('../middleware/isAdmin');
 
@@ -61,5 +61,18 @@ router.post('/balances/deposit/:userId', getProfile, depositBalance);
  *     }
  */
 router.get('/admin/best-profession', getProfile, isAdmin, getBestProfession);
+
+/**
+ * @api {get} /admin/best-clients Get best clients by payment amount
+ * @apiName GetBestClients
+ * @apiGroup Admin
+ * @apiHeader {String} profile_id Profile ID
+ * @apiParam {String} start Start date (YYYY-MM-DD)
+ * @apiParam {String} end End date (YYYY-MM-DD)
+ * @apiParam {Number} [limit=2] Number of clients to return
+ * @apiSuccess {Object[]} data List of best clients
+ * @apiError {Object} error Error message
+ */
+router.get('/admin/best-clients', getProfile, isAdmin, getBestClients);
 
 module.exports = router; 

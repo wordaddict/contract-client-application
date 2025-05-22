@@ -1,6 +1,6 @@
 const { Profile, Contract, Job } = require('../models');
 const { sequelize } = require('../models');
-const { depositBalance, getBestProfession } = require('./profileController');
+const { depositBalance, getBestProfession, getBestClients } = require('./profileController');
 const { BadRequestError } = require('../utils/errors');
 
 describe('ProfileController', () => {
@@ -84,10 +84,10 @@ describe('ProfileController', () => {
             expect(res.json).toHaveBeenCalledWith({
                 status: 'success',
                 message: 'Deposit successful',
-                data: {
+                data: expect.objectContaining({
                     id: clientProfile.id,
                     balance: 1200 // Initial 1000 + 200 deposit
-                }
+                })
             });
         });
 
@@ -305,6 +305,198 @@ describe('ProfileController', () => {
             expect(res.json).toHaveBeenCalledWith({
                 status: 'error',
                 message: 'Internal server error',
+                data: null
+            });
+        });
+    });
+
+    describe('getBestClients', () => {
+        let client1;
+        let client2;
+        let contractor1;
+        let contractor2;
+        let contract1;
+        let contract2;
+        let job1;
+        let job2;
+        let req;
+        let res;
+
+        beforeEach(async () => {
+            // Create test profiles
+            client1 = await Profile.create({
+                firstName: 'Client',
+                lastName: 'One',
+                profession: 'Manager',
+                balance: 1000,
+                type: 'client'
+            });
+
+            client2 = await Profile.create({
+                firstName: 'Client',
+                lastName: 'Two',
+                profession: 'Director',
+                balance: 2000,
+                type: 'client'
+            });
+
+            contractor1 = await Profile.create({
+                firstName: 'Contractor',
+                lastName: 'One',
+                profession: 'Developer',
+                balance: 0,
+                type: 'contractor'
+            });
+
+            contractor2 = await Profile.create({
+                firstName: 'Contractor',
+                lastName: 'Two',
+                profession: 'Designer',
+                balance: 0,
+                type: 'contractor'
+            });
+
+            // Create test contracts
+            contract1 = await Contract.create({
+                terms: 'Contract One',
+                status: 'in_progress',
+                ClientId: client1.id,
+                ContractorId: contractor1.id
+            });
+
+            contract2 = await Contract.create({
+                terms: 'Contract Two',
+                status: 'in_progress',
+                ClientId: client2.id,
+                ContractorId: contractor2.id
+            });
+
+            // Create test jobs with different prices
+            job1 = await Job.create({
+                description: 'Job One',
+                price: 1000,
+                paid: true,
+                paymentDate: '2024-01-15',
+                ContractId: contract1.id
+            });
+
+            job2 = await Job.create({
+                description: 'Job Two',
+                price: 500,
+                paid: true,
+                paymentDate: '2024-01-15',
+                ContractId: contract2.id
+            });
+
+            // Mock request and response objects
+            req = {
+                query: {
+                    start: '2024-01-01',
+                    end: '2024-12-31'
+                },
+                profile: {
+                    type: 'admin'
+                }
+            };
+            res = {
+                json: jest.fn(),
+                status: jest.fn().mockReturnThis()
+            };
+        });
+
+        it('should return best clients by payment amount', async () => {
+            await getBestClients(req, res);
+
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'success',
+                data: [
+                    {
+                        id: client1.id,
+                        fullName: 'Client One',
+                        paid: 1000
+                    },
+                    {
+                        id: client2.id,
+                        fullName: 'Client Two',
+                        paid: 500
+                    }
+                ]
+            });
+        });
+
+        it('should respect the limit parameter', async () => {
+            req.query.limit = 1;
+
+            await getBestClients(req, res);
+
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'success',
+                data: [
+                    {
+                        id: client1.id,
+                        fullName: 'Client One',
+                        paid: 1000
+                    }
+                ]
+            });
+        });
+
+        it('should return 400 for missing dates', async () => {
+            req.query = {};
+
+            await getBestClients(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'error',
+                message: 'Start and end dates are required',
+                data: null
+            });
+        });
+
+        it('should return 400 for invalid date range', async () => {
+            req.query = {
+                start: '2024-12-31',
+                end: '2024-01-01'
+            };
+
+            await getBestClients(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'error',
+                message: 'Start date must be before end date',
+                data: null
+            });
+        });
+
+        it('should return empty array when no jobs found', async () => {
+            req.query = {
+                start: '2023-01-01',
+                end: '2023-12-31'
+            };
+
+            await getBestClients(req, res);
+
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'success',
+                data: []
+            });
+        });
+
+        it('should handle server errors', async () => {
+            // Simulate a server error by passing invalid dates
+            req.query = {
+                start: 'invalid-date',
+                end: 'invalid-date'
+            };
+
+            await getBestClients(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'error',
+                message: 'Invalid date format',
                 data: null
             });
         });
