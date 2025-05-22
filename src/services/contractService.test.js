@@ -1,6 +1,7 @@
 const { Profile, Contract } = require('../models');
 const { sequelize } = require('../models');
 const contractService = require('./contractService');
+const cacheService = require('./cacheService');
 const { NotFoundError, UnauthorizedError } = require('../utils/errors');
 
 describe('ContractService', () => {
@@ -17,6 +18,9 @@ describe('ContractService', () => {
     });
 
     beforeEach(async () => {
+        // Clear cache before each test
+        cacheService.clear();
+
         // Create test profiles
         clientProfile = await Profile.create({
             firstName: 'John',
@@ -37,7 +41,7 @@ describe('ContractService', () => {
         // Create test contract
         contract = await Contract.create({
             terms: 'Test contract',
-            status: 'in_progress',
+            status: 'new',
             ClientId: clientProfile.id,
             ContractorId: contractorProfile.id
         });
@@ -47,6 +51,7 @@ describe('ContractService', () => {
         // Clean up test data
         await Contract.destroy({ where: {} });
         await Profile.destroy({ where: {} });
+        cacheService.clear();
     });
 
     afterAll(async () => {
@@ -90,6 +95,32 @@ describe('ContractService', () => {
             expect(result.ClientId).toBe(clientProfile.id);
             expect(result.ContractorId).toBe(contractorProfile.id);
         });
+
+        it('should cache contract after first retrieval', async () => {
+            const cacheKey = `contract:${contract.id}:${clientProfile.id}`;
+            
+            // First call should hit the database
+            await contractService.getContractById(contract.id, clientProfile.id);
+            
+            // Verify cache was set
+            const cachedContract = cacheService.get(cacheKey);
+            expect(cachedContract).toBeDefined();
+            expect(cachedContract.id).toBe(contract.id);
+        });
+
+        it('should use cached contract on subsequent retrievals', async () => {
+            const cacheKey = `contract:${contract.id}:${clientProfile.id}`;
+            
+            // First call to populate cache
+            await contractService.getContractById(contract.id, clientProfile.id);
+            
+            // Modify contract in database
+            await contract.update({ terms: 'Modified terms' });
+            
+            // Second call should return cached version
+            const result = await contractService.getContractById(contract.id, clientProfile.id);
+            expect(result.terms).toBe('Test contract'); // Should be old value from cache
+        });
     });
 
     describe('getContracts', () => {
@@ -127,6 +158,56 @@ describe('ContractService', () => {
             expect(Array.isArray(result)).toBe(true);
             expect(result.length).toBe(1);
             expect(result[0].status).not.toBe('terminated');
+        });
+
+        it('should cache contracts after first retrieval', async () => {
+            const cacheKey = `contracts:${clientProfile.id}`;
+            
+            // First call should hit the database
+            await contractService.getContracts(clientProfile.id);
+            
+            // Verify cache was set
+            const cachedContracts = cacheService.get(cacheKey);
+            expect(cachedContracts).toBeDefined();
+            expect(Array.isArray(cachedContracts)).toBe(true);
+            expect(cachedContracts.length).toBe(1);
+        });
+
+        it('should use cached contracts on subsequent retrievals', async () => {
+            const cacheKey = `contracts:${clientProfile.id}`;
+            
+            // First call to populate cache
+            await contractService.getContracts(clientProfile.id);
+            
+            // Create new contract
+            await Contract.create({
+                terms: 'New contract',
+                status: 'new',
+                ClientId: clientProfile.id,
+                ContractorId: contractorProfile.id
+            });
+            
+            // Second call should return cached version
+            const result = await contractService.getContracts(clientProfile.id);
+            expect(result.length).toBe(1); // Should be old count from cache
+        });
+    });
+
+    describe('clearContractCache', () => {
+        it('should clear contract cache', async () => {
+            const contractCacheKey = `contract:${contract.id}:${clientProfile.id}`;
+            const contractsCacheKey = `contracts:${clientProfile.id}`;
+            
+            // Populate cache
+            await contractService.getContractById(contract.id, clientProfile.id);
+            await contractService.getContracts(clientProfile.id);
+            
+            // Clear cache
+            contractService.clearContractCache(contract.id, clientProfile.id);
+            
+            // Verify cache was cleared
+            expect(cacheService.get(contractCacheKey)).toBeNull();
+            expect(cacheService.get(contractsCacheKey)).toBeNull();
         });
     });
 }); 
