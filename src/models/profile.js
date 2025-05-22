@@ -20,7 +20,7 @@ module.exports = (sequelize) => {
             type: DataTypes.DECIMAL(12, 2)
         },
         type: {
-            type: DataTypes.ENUM('client', 'contractor')
+            type: DataTypes.ENUM('client', 'contractor', 'admin')
         }
     }, {
         sequelize,

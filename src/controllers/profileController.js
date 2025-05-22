@@ -40,6 +40,7 @@ const depositBalance = async (req, res) => {
             });
         }
 
+        // Handle any other errors as server errors
         res.status(500).json({
             status: 'error',
             message: 'Internal server error',
@@ -48,6 +49,50 @@ const depositBalance = async (req, res) => {
     }
 };
 
+/**
+ * Get the profession that earned the most money in a date range
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+async function getBestProfession(req, res) {
+    try {
+        const { start, end } = req.query;
+
+        if (!start || !end) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Start and end dates are required',
+                data: null
+            });
+        }
+
+        const result = await profileService.getBestProfession(start, end);
+
+        res.json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        console.error('Error in getBestProfession:', error);
+        
+        if (error instanceof BadRequestError) {
+            return res.status(400).json({
+                status: 'error',
+                message: error.message,
+                data: null
+            });
+        }
+
+        // Handle any other errors as server errors
+        return res.status(500).json({
+            status: 'error',
+            message: 'Internal server error',
+            data: null
+        });
+    }
+}
+
 module.exports = {
-    depositBalance
+    depositBalance,
+    getBestProfession
 }; 

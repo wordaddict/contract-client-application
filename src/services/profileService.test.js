@@ -123,4 +123,129 @@ describe('ProfileService', () => {
             expect(updatedProfile.balance).toBe(2000); // Initial 1000 + 1000 deposit
         });
     });
+
+    describe('getBestProfession', () => {
+        let programmerProfile;
+        let designerProfile;
+        let programmerContract;
+        let designerContract;
+        let programmerJob;
+        let designerJob;
+
+        beforeEach(async () => {
+            // Create test profiles with different professions
+            programmerProfile = await Profile.create({
+                firstName: 'John',
+                lastName: 'Doe',
+                profession: 'Programmer',
+                balance: 0,
+                type: 'contractor'
+            });
+
+            designerProfile = await Profile.create({
+                firstName: 'Jane',
+                lastName: 'Smith',
+                profession: 'Designer',
+                balance: 0,
+                type: 'contractor'
+            });
+
+            // Create test contracts
+            programmerContract = await Contract.create({
+                terms: 'Programming contract',
+                status: 'in_progress',
+                ClientId: clientProfile.id,
+                ContractorId: programmerProfile.id
+            });
+
+            designerContract = await Contract.create({
+                terms: 'Design contract',
+                status: 'in_progress',
+                ClientId: clientProfile.id,
+                ContractorId: designerProfile.id
+            });
+
+            // Create test jobs with different prices
+            programmerJob = await Job.create({
+                description: 'Programming job',
+                price: 1000,
+                paid: true,
+                paymentDate: '2024-01-15',
+                ContractId: programmerContract.id
+            });
+
+            designerJob = await Job.create({
+                description: 'Design job',
+                price: 500,
+                paid: true,
+                paymentDate: '2024-01-15',
+                ContractId: designerContract.id
+            });
+        });
+
+        it('should return the profession with highest earnings', async () => {
+            const result = await profileService.getBestProfession('2024-01-01', '2024-12-31');
+            
+            expect(result).toEqual({
+                profession: 'Programmer',
+                totalEarnings: 1000
+            });
+        });
+
+        it('should return null profession when no jobs found', async () => {
+            const result = await profileService.getBestProfession('2023-01-01', '2023-12-31');
+            
+            expect(result).toEqual({
+                profession: null,
+                totalEarnings: 0
+            });
+        });
+
+        it('should throw BadRequestError when dates are missing', async () => {
+            await expect(profileService.getBestProfession(null, '2024-12-31'))
+                .rejects
+                .toThrow(BadRequestError);
+        });
+
+        it('should throw BadRequestError when start date is after end date', async () => {
+            await expect(profileService.getBestProfession('2024-12-31', '2024-01-01'))
+                .rejects
+                .toThrow(BadRequestError);
+        });
+
+        it('should sum up multiple jobs for the same profession', async () => {
+            // Add another paid job for the programmer
+            await Job.create({
+                description: 'Another programming job',
+                price: 2000,
+                paid: true,
+                paymentDate: '2024-01-15',
+                ContractId: programmerContract.id
+            });
+
+            const result = await profileService.getBestProfession('2024-01-01', '2024-12-31');
+            
+            expect(result).toEqual({
+                profession: 'Programmer',
+                totalEarnings: 3000 // 1000 + 2000
+            });
+        });
+
+        it('should only consider paid jobs', async () => {
+            // Add an unpaid job for the programmer
+            await Job.create({
+                description: 'Unpaid programming job',
+                price: 5000,
+                paid: false,
+                ContractId: programmerContract.id
+            });
+
+            const result = await profileService.getBestProfession('2024-01-01', '2024-12-31');
+            
+            expect(result).toEqual({
+                profession: 'Programmer',
+                totalEarnings: 1000 // Only the paid job is counted
+            });
+        });
+    });
 }); 

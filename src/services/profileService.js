@@ -85,6 +85,78 @@ class ProfileService {
             throw error;
         }
     }
+
+    /**
+     * Get the profession that earned the most money in a date range
+     * 
+     * @param {Date} startDate - Start date of the range
+     * @param {Date} endDate - End date of the range
+     * @returns {Promise<Object>} Object containing the best profession and total earnings
+     * @throws {BadRequestError} If dates are invalid
+     */
+    async getBestProfession(startDate, endDate) {
+        // Validate dates
+        if (!startDate || !endDate) {
+            throw new BadRequestError('Start and end dates are required');
+        }
+
+        try {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                throw new Error('Invalid date format');
+            }
+
+            if (start > end) {
+                throw new BadRequestError('Start date must be before end date');
+            }
+
+            // Query to find the profession with highest earnings
+            const result = await Job.findAll({
+                attributes: [
+                    [sequelize.fn('SUM', sequelize.col('price')), 'totalEarnings'],
+                    [sequelize.col('Contract.Contractor.profession'), 'profession']
+                ],
+                include: [{
+                    model: Contract,
+                    required: true,
+                    include: [{
+                        model: Profile,
+                        as: 'Contractor',
+                        required: true,
+                        attributes: ['profession']
+                    }]
+                }],
+                where: {
+                    paid: true,
+                    paymentDate: {
+                        [Op.between]: [start, end]
+                    }
+                },
+                group: [sequelize.col('Contract.Contractor.profession')],
+                order: [[sequelize.fn('SUM', sequelize.col('price')), 'DESC']],
+                limit: 1
+            });
+
+            if (!result.length) {
+                return {
+                    profession: null,
+                    totalEarnings: 0
+                };
+            }
+
+            return {
+                profession: result[0].getDataValue('profession'),
+                totalEarnings: parseInt(result[0].getDataValue('totalEarnings'))
+            };
+        } catch (error) {
+            if (error instanceof BadRequestError) {
+                throw error;
+            }
+            throw new Error('Invalid date format');
+        }
+    }
 }
 
 module.exports = new ProfileService(); 

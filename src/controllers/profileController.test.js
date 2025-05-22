@@ -1,6 +1,6 @@
 const { Profile, Contract, Job } = require('../models');
 const { sequelize } = require('../models');
-const { depositBalance } = require('./profileController');
+const { depositBalance, getBestProfession } = require('./profileController');
 const { BadRequestError } = require('../utils/errors');
 
 describe('ProfileController', () => {
@@ -140,6 +140,171 @@ describe('ProfileController', () => {
             expect(res.json).toHaveBeenCalledWith({
                 status: 'error',
                 message: 'Invalid deposit amount',
+                data: null
+            });
+        });
+    });
+
+    describe('getBestProfession', () => {
+        let programmerProfile;
+        let designerProfile;
+        let programmerContract;
+        let designerContract;
+        let programmerJob;
+        let designerJob;
+        let req;
+        let res;
+
+        beforeEach(async () => {
+            // Create test profiles with different professions
+            programmerProfile = await Profile.create({
+                firstName: 'John',
+                lastName: 'Doe',
+                profession: 'Programmer',
+                balance: 0,
+                type: 'contractor'
+            });
+
+            designerProfile = await Profile.create({
+                firstName: 'Jane',
+                lastName: 'Smith',
+                profession: 'Designer',
+                balance: 0,
+                type: 'contractor'
+            });
+
+            // Create test contracts
+            programmerContract = await Contract.create({
+                terms: 'Programming contract',
+                status: 'in_progress',
+                ClientId: clientProfile.id,
+                ContractorId: programmerProfile.id
+            });
+
+            designerContract = await Contract.create({
+                terms: 'Design contract',
+                status: 'in_progress',
+                ClientId: clientProfile.id,
+                ContractorId: designerProfile.id
+            });
+
+            // Create test jobs with different prices
+            programmerJob = await Job.create({
+                description: 'Programming job',
+                price: 1000,
+                paid: true,
+                paymentDate: '2024-01-15',
+                ContractId: programmerContract.id
+            });
+
+            designerJob = await Job.create({
+                description: 'Design job',
+                price: 500,
+                paid: true,
+                paymentDate: '2024-01-15',
+                ContractId: designerContract.id
+            });
+
+            // Mock request and response objects
+            req = {
+                query: {
+                    start: '2024-01-01',
+                    end: '2024-12-31'
+                }
+            };
+            res = {
+                json: jest.fn(),
+                status: jest.fn().mockReturnThis()
+            };
+        });
+
+        it('should return best profession data if profile is an admin', async () => {
+            req.profile = {
+                type: 'admin'
+            };
+
+            await getBestProfession(req, res);
+
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'success',
+                data: {
+                    profession: 'Programmer',
+                    totalEarnings: 1000
+                }
+            });
+        });
+
+        it('should return 400 for missing dates', async () => {
+            req.profile = {
+                type: 'admin'
+            };
+            req.query = {};
+
+            await getBestProfession(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'error',
+                message: 'Start and end dates are required',
+                data: null
+            });
+        });
+
+        it('should return 400 for invalid date range', async () => {
+            req.profile = {
+                type: 'admin'
+            };
+            req.query = {
+                start: '2024-12-31',
+                end: '2024-01-01'
+            };
+
+            await getBestProfession(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'error',
+                message: 'Start date must be before end date',
+                data: null
+            });
+        });
+
+        it('should return null profession when no jobs found', async () => {
+            req.profile = {
+                type: 'admin'
+            };
+            req.query = {
+                start: '2023-01-01',
+                end: '2023-12-31'
+            };
+
+            await getBestProfession(req, res);
+
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'success',
+                data: {
+                    profession: null,
+                    totalEarnings: 0
+                }
+            });
+        });
+
+        it('should handle server errors', async () => {
+            req.profile = {
+                type: 'admin'
+            };
+            // Simulate a server error by passing invalid dates
+            req.query = {
+                start: 'invalid-date',
+                end: 'invalid-date'
+            };
+
+            await getBestProfession(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(500);
+            expect(res.json).toHaveBeenCalledWith({
+                status: 'error',
+                message: 'Internal server error',
                 data: null
             });
         });

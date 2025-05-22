@@ -1,6 +1,7 @@
 const express = require('express');
-const { depositBalance } = require('../controllers/profileController');
+const { depositBalance, getBestProfession } = require('../controllers/profileController');
 const { getProfile } = require('../middleware/getProfile');
+const isAdmin = require('../middleware/isAdmin');
 
 const router = express.Router();
 
@@ -22,5 +23,43 @@ const router = express.Router();
  * @apiError (404) {String} message Error message for profile not found
  */
 router.post('/balances/deposit/:userId', getProfile, depositBalance);
+
+/**
+ * @api {get} /admin/best-profession Get best profession
+ * @apiName GetBestProfession
+ * @apiGroup Admin
+ * @apiVersion 1.0.0
+ * 
+ * @apiHeader {String} profile_id Profile ID of the admin
+ * 
+ * @apiQuery {String} start Start date (YYYY-MM-DD)
+ * @apiQuery {String} end End date (YYYY-MM-DD)
+ * 
+ * @apiSuccess {String} status Success status
+ * @apiSuccess {Object} data Response data
+ * @apiSuccess {String} data.profession Best earning profession
+ * @apiSuccess {Number} data.totalEarnings Total earnings for the profession
+ * 
+ * @apiError (400) {String} status Error status
+ * @apiError (400) {String} message Error message
+ * @apiError (400) {null} data null
+ * 
+ * @apiError (401) {String} status Error status
+ * @apiError (401) {String} message Authentication required
+ * @apiError (401) {null} data null
+ * 
+ * @apiError (403) {String} status Error status
+ * @apiError (403) {String} message Admin access required
+ * @apiError (403) {null} data null
+ * 
+ * @apiErrorExample {json} Error-Response:
+ *     HTTP/1.1 400 Bad Request
+ *     {
+ *       "status": "error",
+ *       "message": "Start and end dates are required",
+ *       "data": null
+ *     }
+ */
+router.get('/admin/best-profession', getProfile, isAdmin, getBestProfession);
 
 module.exports = router; 
