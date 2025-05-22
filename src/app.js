@@ -21,13 +21,13 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '10kb' }));
 // Set security-related headers
 app.disable('x-powered-by'); // Remove X-Powered-By header
 
+// Serve static files from the public directory
+app.use(express.static('public'));
+
 // Database setup
 app.set('sequelize', sequelize);
 app.set('models', sequelize.models);
 
-app.get('/', (req, res) => {
-    res.send('Hello World');
-});
 
 // Routes
 app.use('/contracts', contractRoutes);
@@ -44,11 +44,11 @@ app.use((req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
-    console.error('Global error:', err);
-    res.status(err.status || 500).json({
+app.use((err, req, res) => {
+    console.error(err.stack);
+    res.status(500).json({
         status: 'error',
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error',
+        message: 'Internal server error',
         data: null
     });
 });

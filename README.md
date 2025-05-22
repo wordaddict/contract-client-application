@@ -28,6 +28,23 @@ The API can be tested using the provided Postman collection. Import the followin
 4. Create admin user: `npm run seed:admin`
 5. Use the Postman collection to test the API endpoints
 
+## Frontend Demo
+
+A simple frontend is included to demonstrate API usage. It is served automatically from the `public/` directory when you run the backend server.
+
+### How to Use
+1. Start the backend server: `npm run dev`
+2. Open your browser and go to [http://localhost:3001](http://localhost:3001)
+3. Enter a profile ID at the top and click **Set Profile**
+   - **Sample user profile ID:** `2`
+   - **Sample admin profile ID:** `9`
+4. Explore contracts, jobs, and the admin dashboard features.
+
+The frontend is built with HTML, Tailwind CSS, and vanilla JavaScript. It demonstrates:
+- Viewing contracts and jobs for a profile
+- Paying for jobs
+- Using admin endpoints (best profession, best clients)
+
 
 # DEEL BACKEND TASK
 

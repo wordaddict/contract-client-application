@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deel Task Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mx-auto">
+        <!-- Header -->
+        <header class="mb-8 border-b-2 border-gray-200 pb-6">
+            <h1 class="text-4xl font-extrabold text-gray-800">Deel Task Manager</h1>
+            <div class="mt-4 flex items-center">
+                <input type="text" id="profileId" placeholder="Enter Profile ID" 
+                    class="mr-2 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="setProfile()" 
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    Set Profile
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Contracts Section -->
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4">Contracts</h2>
+                <div id="contractsList" class="space-y-4">
+                    <!-- Contracts will be listed here -->
+                </div>
+            </div>
+
+            <!-- Jobs Section -->
+            <div class="card">
+                <h2 class="text-xl font-semibold mb-4">Jobs</h2>
+                <div id="jobsList" class="space-y-4">
+                    <!-- Jobs will be listed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="my-10 border-t-2 border-gray-200"></div>
+
+        <!-- Admin Section -->
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">Admin Dashboard</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Best Profession -->
+                <div>
+                    <h3 class="text-lg font-medium mb-2">Best Profession</h3>
+                    <div class="flex space-x-4">
+                        <input type="date" id="startDate" class="px-4 py-2 border rounded-lg">
+                        <input type="date" id="endDate" class="px-4 py-2 border rounded-lg">
+                        <button onclick="getBestProfession()" 
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            Get Best Profession
+                        </button>
+                    </div>
+                    <div id="bestProfessionResult" class="mt-4"></div>
+                </div>
+
+                <!-- Best Clients -->
+                <div>
+                    <h3 class="text-lg font-medium mb-2">Best Clients</h3>
+                    <div class="flex space-x-4">
+                        <input type="date" id="clientsStartDate" class="px-4 py-2 border rounded-lg">
+                        <input type="date" id="clientsEndDate" class="px-4 py-2 border rounded-lg">
+                        <input type="number" id="clientsLimit" placeholder="Limit" value="2" 
+                            class="px-4 py-2 border rounded-lg w-20">
+                        <button onclick="getBestClients()" 
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            Get Best Clients
+                        </button>
+                    </div>
+                    <div id="bestClientsResult" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+        <footer>
+            &copy; 2024 Deel Task Manager &mdash; Demo Frontend
+        </footer>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html> 
