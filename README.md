@@ -1,3 +1,34 @@
+# DEEL BACKEND SOLUTION
+
+## Documentation
+
+### Technical Documentation
+- [Technical Overview](docs/TECHNICAL.md) - Project structure, key decisions, and setup instructions
+- [API Documentation](docs/API.md) - Detailed API endpoints and usage
+- [Database Documentation](docs/DATABASE.md) - Database design and models
+- [Security Documentation](docs/SECURITY.md) - Security measures and best practices
+- [Testing Documentation](docs/TESTING.md) - Testing strategy and implementation
+
+### API Testing
+
+#### Postman Collection
+The API can be tested using the provided Postman collection. Import the following collection into Postman:
+- [Postman Collection](postman_collection.json) - Postman collection that can be imported
+
+
+#### Environment Setup
+1. Import the collection into Postman
+2. Create a new environment with the following variables:
+   - `PORT`: `3001`
+
+#### Testing Steps
+1. Start the server: `npm start`
+2. Run database migrations: `npm run migrate`
+3. Seed the database: `npm run seed`
+4. Create admin user: `npm run seed:admin`
+5. Use the Postman collection to test the API endpoints
+
+
 # DEEL BACKEND TASK
 
 💫 Welcome! 🎉
