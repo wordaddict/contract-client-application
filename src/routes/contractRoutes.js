@@ -3,7 +3,10 @@ const router = express.Router();
 const contractController = require('../controllers/contractController');
 const { getProfile } = require('../middleware/getProfile');
 
-router.get('/:id', getProfile, contractController.getContractById);
-router.get('/', getProfile, contractController.getContracts);
+// Apply authentication middleware to all routes
+router.use(getProfile);
+
+router.get('/:id', contractController.getContractById);
+router.get('/', contractController.getContracts);
 
 module.exports = router; 

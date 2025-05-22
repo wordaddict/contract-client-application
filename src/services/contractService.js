@@ -1,30 +1,34 @@
-const contractRepository = require('../repositories/contractRepository');
+const { Contract } = require('../models');
+const { NotFoundError, UnauthorizedError } = require('../utils/errors');
+const { Op } = require('sequelize');
 
 class ContractService {
-    async getContractById(id, profileId) {
-        if (!id || !profileId) {
-            throw new Error('Contract ID and Profile ID are required');
-        }
-
-        const contract = await contractRepository.findById(id);
+    async getContractById(contractId, profileId) {
+        const contract = await Contract.findOne({ where: { id: contractId } });
         
         if (!contract) {
-            throw new Error('Contract not found');
+            throw new NotFoundError('Contract not found');
         }
 
         if (contract.ClientId !== profileId && contract.ContractorId !== profileId) {
-            throw new Error('Unauthorized access to contract');
+            throw new UnauthorizedError('Unauthorized access to contract');
         }
 
         return contract;
     }
 
-    async getContractsByProfileId(profileId) {
-        if (!profileId) {
-            throw new Error('Profile ID is required');
-        }
-
-        return await contractRepository.findByProfileId(profileId);
+    async getContracts(profileId) {
+        return Contract.findAll({
+            where: {
+                [Op.or]: [
+                    { ClientId: profileId },
+                    { ContractorId: profileId }
+                ],
+                status: {
+                    [Op.ne]: 'terminated'
+                }
+            }
+        });
     }
 }
 

@@ -1,75 +1,44 @@
 const contractService = require('../services/contractService');
+const { NotFoundError, UnauthorizedError } = require('../utils/errors');
 
-class ContractController {
-    async getContractById(req, res) {
-        try {
-            if (!req.profile) {
-                return res.status(401).json({
-                    status: 'error',
-                    message: 'Authentication required'
-                });
-            }
-
-            const { id } = req.params;
-            const profileId = req.profile.id;
-
-            const contract = await contractService.getContractById(id, profileId);
-
-            res.json({
-                status: 'success',
-                data: { contract }
-            });
-        } catch (error) {
-            console.error('Error in getContractById:', error);
-            
-            if (error.message === 'Contract not found') {
-                return res.status(404).json({
-                    status: 'error',
-                    message: error.message
-                });
-            }
-
-            if (error.message === 'Unauthorized access to contract') {
-                return res.status(403).json({
-                    status: 'error',
-                    message: error.message
-                });
-            }
-
-            res.status(500).json({
+const getContractById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const contract = await contractService.getContractById(id, req.profile.id);
+        res.json(contract);
+    } catch (error) {
+        if (error instanceof NotFoundError) {
+            return res.status(404).json({
                 status: 'error',
-                message: error.message || 'Internal server error'
+                message: error.message
             });
         }
-    }
-
-    async getContracts(req, res) {
-        try {
-            if (!req.profile) {
-                return res.status(401).json({
-                    status: 'error',
-                    message: 'Authentication required'
-                });
-            }
-
-            const profileId = req.profile.id;
-            const contracts = await contractService.getContractsByProfileId(profileId);
-
-            res.json({
-                status: 'success',
-                data: {
-                    contracts,
-                    count: contracts.length
-                }
-            });
-        } catch (error) {
-            console.error('Error in getContracts:', error);
-            res.status(500).json({
+        if (error instanceof UnauthorizedError) {
+            return res.status(401).json({
                 status: 'error',
-                message: error.message || 'Internal server error'
+                message: error.message
             });
         }
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal server error'
+        });
     }
-}
+};
 
-module.exports = new ContractController(); 
+const getContracts = async (req, res) => {
+    try {
+        const contracts = await contractService.getContracts(req.profile.id);
+        res.json(contracts);
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal server error'
+        });
+    }
+};
+
+module.exports = {
+    getContractById,
+    getContracts
+}; 
