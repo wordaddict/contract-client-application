@@ -22,18 +22,19 @@ The API can be tested using the provided Postman collection. Import the followin
    - `PORT`: `3001`
 
 #### Testing Steps
-1. Start the server: `npm start`
-2. Run database migrations: `npm run migrate`
-3. Seed the database: `npm run seed`
-4. Create admin user: `npm run seed:admin`
+1. Install packages: `npm install`
+2. Seed the database: `npm run seed`
+3. Create admin user: `npm run seed:admin`
+4. Start the server: `npm run start`
 5. Use the Postman collection to test the API endpoints
+6. Run code test with `npm run test`
 
 ## Frontend Demo
 
 A simple frontend is included to demonstrate API usage. It is served automatically from the `public/` directory when you run the backend server.
 
 ### How to Use
-1. Start the backend server: `npm run dev`
+1. Start the backend server: `npm run start`
 2. Open your browser and go to [http://localhost:3001](http://localhost:3001)
 3. Enter a profile ID at the top and click **Set Profile**
    - **Sample user profile ID:** `2`
