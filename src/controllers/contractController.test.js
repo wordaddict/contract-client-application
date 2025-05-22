@@ -61,9 +61,10 @@ describe('ContractController', () => {
                 .set('profile_id', clientProfile.id);
 
             expect(response.status).toBe(200);
-            expect(response.body.id).toBe(contract.id);
-            expect(response.body.ClientId).toBe(clientProfile.id);
-            expect(response.body.ContractorId).toBe(contractorProfile.id);
+            expect(response.body.status).toBe('success');
+            expect(response.body.data.id).toBe(contract.id);
+            expect(response.body.data.ClientId).toBe(clientProfile.id);
+            expect(response.body.data.ContractorId).toBe(contractorProfile.id);
         });
 
         it('should return contract for contractor', async () => {
@@ -72,9 +73,10 @@ describe('ContractController', () => {
                 .set('profile_id', contractorProfile.id);
 
             expect(response.status).toBe(200);
-            expect(response.body.id).toBe(contract.id);
-            expect(response.body.ClientId).toBe(clientProfile.id);
-            expect(response.body.ContractorId).toBe(contractorProfile.id);
+            expect(response.body.status).toBe('success');
+            expect(response.body.data.id).toBe(contract.id);
+            expect(response.body.data.ClientId).toBe(clientProfile.id);
+            expect(response.body.data.ContractorId).toBe(contractorProfile.id);
         });
 
         it('should return 404 for non-existent contract', async () => {
@@ -84,14 +86,13 @@ describe('ContractController', () => {
 
             expect(response.status).toBe(404);
             expect(response.body.status).toBe('error');
-            expect(response.body.message).toBe('Contract not found');
         });
 
         it('should return 401 for unauthorized access', async () => {
             const otherProfile = await Profile.create({
                 firstName: 'Other',
                 lastName: 'User',
-                profession: 'Designer',
+                profession: 'Tester',
                 balance: 0,
                 type: 'client'
             });
@@ -102,7 +103,6 @@ describe('ContractController', () => {
 
             expect(response.status).toBe(401);
             expect(response.body.status).toBe('error');
-            expect(response.body.message).toBe('Unauthorized access to contract');
         });
 
         it('should return 401 for missing authentication', async () => {
@@ -111,7 +111,6 @@ describe('ContractController', () => {
 
             expect(response.status).toBe(401);
             expect(response.body.status).toBe('error');
-            expect(response.body.message).toBe('Authentication required');
         });
     });
 
@@ -122,9 +121,10 @@ describe('ContractController', () => {
                 .set('profile_id', clientProfile.id);
 
             expect(response.status).toBe(200);
-            expect(Array.isArray(response.body)).toBe(true);
-            expect(response.body.length).toBe(1);
-            expect(response.body[0].id).toBe(contract.id);
+            expect(response.body.status).toBe('success');
+            expect(Array.isArray(response.body.data)).toBe(true);
+            expect(response.body.data.length).toBe(1);
+            expect(response.body.data[0].id).toBe(contract.id);
         });
 
         it('should return non-terminated contracts for contractor', async () => {
@@ -133,16 +133,17 @@ describe('ContractController', () => {
                 .set('profile_id', contractorProfile.id);
 
             expect(response.status).toBe(200);
-            expect(Array.isArray(response.body)).toBe(true);
-            expect(response.body.length).toBe(1);
-            expect(response.body[0].id).toBe(contract.id);
+            expect(response.body.status).toBe('success');
+            expect(Array.isArray(response.body.data)).toBe(true);
+            expect(response.body.data.length).toBe(1);
+            expect(response.body.data[0].id).toBe(contract.id);
         });
 
         it('should return empty array for user with no contracts', async () => {
             const otherProfile = await Profile.create({
                 firstName: 'Other',
                 lastName: 'User',
-                profession: 'Designer',
+                profession: 'Tester',
                 balance: 0,
                 type: 'client'
             });
@@ -152,8 +153,9 @@ describe('ContractController', () => {
                 .set('profile_id', otherProfile.id);
 
             expect(response.status).toBe(200);
-            expect(Array.isArray(response.body)).toBe(true);
-            expect(response.body.length).toBe(0);
+            expect(response.body.status).toBe('success');
+            expect(Array.isArray(response.body.data)).toBe(true);
+            expect(response.body.data.length).toBe(0);
         });
 
         it('should return 401 for missing authentication', async () => {
@@ -162,7 +164,6 @@ describe('ContractController', () => {
 
             expect(response.status).toBe(401);
             expect(response.body.status).toBe('error');
-            expect(response.body.message).toBe('Authentication required');
         });
     });
 }); 

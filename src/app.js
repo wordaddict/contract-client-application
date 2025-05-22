@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { sequelize } = require('./models');
 const contractRoutes = require('./routes/contractRoutes');
+const jobRoutes = require('./routes/jobRoutes');
 const { helmet, limiter, securityHeaders, sanitizeInput } = require('./middleware/security');
 
 const app = express();
@@ -29,12 +30,14 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use('/contracts', contractRoutes);
+app.use('/jobs', jobRoutes);
 
 // Error handling for unhandled routes
 app.use((req, res) => {
     res.status(404).json({
         status: 'error',
-        message: 'Route not found'
+        message: 'Route not found',
+        data: null
     });
 });
 
@@ -43,7 +46,8 @@ app.use((err, req, res, next) => {
     console.error('Global error:', err);
     res.status(err.status || 500).json({
         status: 'error',
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+        message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error',
+        data: null
     });
 });
 
