@@ -2,16 +2,6 @@
 
 This document provides comprehensive technical documentation for the Deel Backend Task. For specific details, please refer to the following sections:
 
-## Table of Contents
-
-1. [API Endpoints](docs/API.md) - Detailed documentation of all API endpoints
-2. [Database Design](docs/DATABASE.md) - Database schema, relationships, and considerations
-3. [Authentication & Authorization](docs/AUTH.md) - Authentication flow and authorization rules
-4. [Caching Strategy](docs/CACHE.md) - Caching implementation and considerations
-5. [Security Measures](docs/SECURITY.md) - Security implementations and best practices
-6. [Error Handling](docs/ERRORS.md) - Error handling strategy and custom error types
-7. [Testing Strategy](docs/TESTING.md) - Testing approach and test coverage
-
 ## Project Structure
 
 ```
@@ -23,7 +13,6 @@ src/
 ├── routes/         # API routes
 ├── services/       # Business logic
 ├── utils/          # Utility functions
-└── __tests__/      # Test files
 ```
 
 ## Key Technical Decisions
