@@ -37,7 +37,7 @@ A simple frontend is included to demonstrate API usage. It is served automatical
 2. Open your browser and go to [http://localhost:3001](http://localhost:3001)
 3. Enter a profile ID at the top and click **Set Profile**
    - **Sample user profile ID:** `2`
-   - **Sample admin profile ID:** `9`
+    - when you run `npm run seed:admin` you can add the Id returned in the console as an admin user profile
 4. Explore contracts, jobs, and the admin dashboard features.
 
 The frontend is built with HTML, Tailwind CSS, and vanilla JavaScript. It demonstrates:
